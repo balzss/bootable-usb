@@ -1,0 +1,84 @@
+#!/usr/bin/python
+
+import os
+from subprocess import check_output, call
+
+while True:
+    iso_list = check_output('find ~ -name *.iso', shell=True) \
+            .decode('utf-8').split('\n')[:-1]
+
+    iso_list.sort(key=os.path.getmtime, reverse=True)
+
+    print('List of your ISO files:')
+
+    if len(iso_list) is 0:
+        if input('\tIt seems you don\'t have any ISO file in your system, ' +
+                'press (enter) to retry search or (q) to quit! ') == 'q':
+            exit()
+        else:
+            print()
+            continue
+    for i, iso in enumerate(iso_list):
+        print('\t(%d) %s' % (i, iso))
+
+    selected_iso = input('Type the number of the ISO file ' +
+            'of your choise or (q) to quit! (default: 0) ')
+    if selected_iso == '':
+        selected_iso = iso_list[0]
+        break
+    elif selected_iso.isdigit() and int(selected_iso) < len(iso_list):
+        selected_iso = iso_list[int(selected_iso)]
+        break
+    elif selected_iso == 'q':
+        exit()
+    else:
+        print('type a valid number please!')
+
+while True:
+    drive_list = check_output('ls -l /dev/disk/by-id/', shell=True) \
+            .decode('utf-8').split('\n')[:-1]
+
+    labels = []
+    print('\nList of your USB drives:')
+    i = 0
+    has_usb = False
+    for d in drive_list:
+        if not d[-1].isdigit() and 'usb' in d:
+            name = ' '.join(d.split('usb-')[1].split('_')[:-1])
+            label = d.split('/')[-1]
+            labels.append(label)
+            size = int(check_output('cat /sys/class/block/%s/size'
+                    % label, shell=True)) / 2 / 1024 / 1024
+            print('\t(%d) %s - %.2f GB' % (i, name, size))
+            i += 1
+            has_usb = True
+
+    if not has_usb:
+        if input("\tIt seems you don't have any USB drive connected!\n" +
+                "\tPlease connect your device " +
+                "and hit (enter) or (q) to quit! ") == 'q':
+            exit()
+    else:
+        break
+
+while True:
+    selected_drive = input('Type the number of the USB drive ' +
+            'of your choise! (default: 0) ')
+
+    if selected_drive.isdigit() and int(selected_drive) < len(labels):
+        selected_drive = '/dev/' + labels[int(selected_drive)]
+    elif selected_drive == '':
+        selected_drive = '/dev/' + labels[0]
+        pr = input('This will erease everything on %s! Are you sure?(y/n/q) '
+                % selected_drive)
+        if pr == 'y':
+            call('umount %s1' % selected_drive, shell=True)
+            call('sudo mkdosfs -F 32 -I %s' % selected_drive, shell=True)
+            call('sudo dd if=%s of=%s bs=4M oflag=direct status=progress'
+                    % (selected_iso, selected_drive), shell=True)
+            break
+        elif pr == 'q':
+            exit()
+
+    else:
+        print('type a valid number please!')
