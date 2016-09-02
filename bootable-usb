@@ -72,7 +72,7 @@ while True:
         pr = input('This will erease everything on %s! Are you sure?(y/n/q) '
                 % selected_drive)
         if pr == 'y':
-            call('umount %s1' % selected_drive, shell=True)
+            call('for n in /dev/%s* ; do umount $n ; done' % selected_drive, shell=True)
             call('sudo mkdosfs -F 32 -I %s' % selected_drive, shell=True)
             call('sudo dd if=%s of=%s bs=4M oflag=direct status=progress'
                     % (selected_iso, selected_drive), shell=True)
