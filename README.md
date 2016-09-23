@@ -16,16 +16,17 @@ A small command-line utility for linux to create bootable usb-s fast and easy - 
 I'm the type of user how likes experimenting with different OS-s and distros and found it way too time consuming to manually create the bootable usb-s in the command line. I hope others find this useful as well. 
 
 ## How to install it
-´´´
+```
 pip install bootable-usb
-´´´
+```
+
 ## How to use it
 Just run the following command and after that everything should be self-explanatory
-´´´
+```
 bootable-usb
-´´´
+```
 
 ## Other
-License can be found in LICENSE.txt
-If you encounter any bug pleas report it either here or write an e-mail to **balazs.saros@gmail.com**
-Pull requests are very welcome! :)
+- License can be found in LICENSE.txt
+- If you encounter any bug please report it either here or at **balazs.saros@gmail.com**
+- Pull requests are very welcome! :)
