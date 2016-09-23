@@ -1,6 +1,0 @@
-bootable-usb
-setup.py
-bootable_usb.egg-info/PKG-INFO
-bootable_usb.egg-info/SOURCES.txt
-bootable_usb.egg-info/dependency_links.txt
-bootable_usb.egg-info/top_level.txt
