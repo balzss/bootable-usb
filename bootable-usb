@@ -1,7 +1,9 @@
 #!/usr/bin/python
 
-import os
-from subprocess import check_output, call
+import os, signal, sys
+from subprocess import check_output, call, DEVNULL, STDOUT
+
+signal.signal(signal.SIGINT, lambda x,y: sys.exit(0))
 
 while True:
     iso_list = check_output('find ~ -name *.iso', shell=True) \
@@ -12,27 +14,21 @@ while True:
     print('List of your ISO files:')
 
     if len(iso_list) is 0:
-        if input('\tIt seems you don\'t have any ISO file in your system, ' +
-                'press (enter) to retry search or (q) to quit! ') == 'q':
-            exit()
-        else:
-            print()
-            continue
+        print('\tIt seems you don\'t have any ISO files!')
+        exit()
+
     for i, iso in enumerate(iso_list):
         print('\t(%d) %s' % (i, iso))
 
-    selected_iso = input('Type the number of the ISO file ' +
-            'of your choise or (q) to quit! (default: 0) ')
+    selected_iso = input('Select your ISO (default: 0) ')
     if selected_iso == '':
         selected_iso = iso_list[0]
         break
     elif selected_iso.isdigit() and int(selected_iso) < len(iso_list):
         selected_iso = iso_list[int(selected_iso)]
         break
-    elif selected_iso == 'q':
-        exit()
     else:
-        print('type a valid number please!')
+        print('Type a valid number please!\n')
 
 while True:
     drive_list = check_output('ls -l /dev/disk/by-id/', shell=True) \
@@ -54,31 +50,40 @@ while True:
             has_usb = True
 
     if not has_usb:
-        if input("\tIt seems you don't have any USB drive connected!\n" +
-                "\tPlease connect your device " +
-                "and hit (enter) or (q) to quit! ") == 'q':
-            exit()
+        print('\tIt seems you don\'t have any USB drive connected!')
+        exit()
     else:
         break
 
 while True:
-    selected_drive = input('Type the number of the USB drive ' +
-            'of your choise! (default: 0) ')
+    selected_drive = input('Select your USB drive! (default: 0) ')
 
     if selected_drive.isdigit() and int(selected_drive) < len(labels):
         selected_drive = '/dev/' + labels[int(selected_drive)]
     elif selected_drive == '':
         selected_drive = '/dev/' + labels[0]
-        pr = input('This will erease everything on %s! Are you sure?(y/n/q) '
-                % selected_drive)
-        if pr == 'y':
-            call('for n in /dev/%s* ; do umount $n ; done' % selected_drive, shell=True)
-            call('sudo mkdosfs -F 32 -I %s' % selected_drive, shell=True)
-            call('sudo dd if=%s of=%s bs=4M oflag=direct status=progress'
-                    % (selected_iso, selected_drive), shell=True)
-            break
-        elif pr == 'q':
-            exit()
-
     else:
-        print('type a valid number please!')
+        print('Type a valid number please!\n')
+        continue
+
+
+    sure = True if input('This will erease everything on %s! Are you sure? (y/n) '
+            % selected_drive) == 'y' else False
+
+    if sure:
+
+        is_mounted = True if call('mount | grep %s' % selected_drive, shell=True,
+                stdout=DEVNULL, stderr=STDOUT) == 0 else False
+        if is_mounted:
+            mount_part = check_output('mount | grep %s' % selected_drive,
+                    shell=True).decode('utf-8').split(' on')[0]
+            call('umount %s' % mount_part, shell=True)
+            print("drive unmounted!")
+
+        call('sudo mkdosfs -F 32 -I %s' % selected_drive, shell=True)
+        call('sudo dd if=%s of=%s bs=4M oflag=direct status=progress'
+                % (selected_iso, selected_drive), shell=True)
+        break
+    else:
+        exit()
+
