@@ -8,7 +8,7 @@ signal.signal(signal.SIGINT, lambda x,y: sys.exit(0))
 def main():
 
     # listing iso files
-    f_dir = '~'
+    f_dir = '$(pwd)'
     iso_list = check_output('find %s -name *.iso' % f_dir, shell=True) \
             .decode('utf-8').split('\n')[:-1]
 
