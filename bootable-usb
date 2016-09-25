@@ -1,62 +1,69 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import os, signal, sys
 from subprocess import check_output, call, DEVNULL, STDOUT
 
-signal.signal(signal.SIGINT, lambda x,y: sys.exit(0))
+# when user exits with Ctrl-C, don't show error msg
+signal.signal(signal.SIGINT, lambda x,y: exit())
 
-def main():
-
-    # listing iso files
-    f_dir = '~'
-    iso_list = check_output('find %s -name *.iso' % f_dir, shell=True) \
-            .decode('utf-8').split('\n')[:-1]
-
-    iso_list.sort(key=os.path.getmtime, reverse=True)
-
-    print('List of your ISO files:')
-
-    if len(iso_list) is 0:
-        print('\tIt seems you don\'t have any ISO files!')
+def main(argv):
+    # collecting those nasty ISO files
+    f_dir = '.' if len(argv) < 2 else argv[1]
+    try:
+        iso_list = check_output("find %s -name '*.iso'" % f_dir, shell=True,
+                stderr=STDOUT).decode('utf-8').split('\n')[:-1]
+    except Exception as e:
+        print("%s is not a valid directory!" % f_dir)
         exit()
 
-    for i, iso in enumerate(iso_list):
-        print('\t(%d) %s' % (i, iso))
+    if len(iso_list) is 0:
+        print("You don't have ISO files in this directory!")
+        exit()
 
-    selected_iso = input('Select your ISO (default: 0) ')
+    # sorting, listing, selecting
+    iso_list.sort(key=os.path.getmtime, reverse=True)
+    print('List of your ISO files:\n')
+
+    for i, iso in enumerate(iso_list):
+        print('  (%d) %s' % (i, iso))
+
+    selected_iso = input('\nSelect your ISO (default: 0) ')
     if selected_iso == '':
         selected_iso = iso_list[0]
     elif selected_iso.isdigit() and int(selected_iso) < len(iso_list):
         selected_iso = iso_list[int(selected_iso)]
     else:
-        print('This is not a valid number!\n')
+        print('\nThis is not a valid number!')
         exit()
+
 
     # listing drives
-    drive_list = check_output('ls -l /dev/disk/by-id/', shell=True) \
-            .decode('utf-8').split('\n')[:-1]
+    print() # empty line for aesthetics
 
-    labels = []
-    print('\nList of your USB drives:')
-    i = 0
-    has_usb = False
-    for d in drive_list:
-        if not d[-1].isdigit() and 'usb' in d:
-            name = ' '.join(d.split('usb-')[1].split('_')[:-1])
-            label = d.split('/')[-1]
-            labels.append(label)
-            size = int(check_output('cat /sys/class/block/%s/size'
-                    % label, shell=True)) / 2 / 1024 / 1024
-            print('\t(%d) %s - %.2f GB' % (i, name, size))
-            i += 1
-            has_usb = True
+    drive_list = check_output('ls -l /dev/disk/by-id/',
+            shell=True).decode('utf-8')
 
-    if not has_usb:
-        print('\tIt seems you don\'t have any USB drive connected!')
+    if 'usb' not in drive_list:
+        print("You don't have any USB drive connected!")
         exit()
 
+    usb_list = [d for d in drive_list.split('\n')[:-1]
+            if not d[-1].isdigit() and 'usb' in d]
+
+    print('List of your USB drives:')
+
+    labels = []
+    for i, usb in enumerate(usb_list):
+        name = ' '.join(usb.split('usb-')[1].split('_')[:-1])
+        label = usb.split('/')[-1]
+        labels.append(label)
+        size = int(check_output('cat /sys/class/block/%s/size'
+                % label, shell=True)) / 2 / 1024 / 1024
+        print('\n  (%d) %s - %.2f GB' % (i, name, size))
+
+
     # drive selection
-    selected_drive = input('Select your USB drive! (default: 0) ')
+    selected_drive = input('\nSelect your USB drive! (default: 0) ')
 
     if selected_drive.isdigit() and int(selected_drive) < len(labels):
         selected_drive = '/dev/' + labels[int(selected_drive)]
@@ -66,8 +73,7 @@ def main():
         print('This is not a valid number!\n')
         exit()
 
-
-    sure = True if input('This will erease %s Are you sure? (y/n) '
+    sure = True if input('\nThis will erease %s Are you sure? (y/n) '
             % selected_drive) == 'y' else False
 
     if sure:
@@ -81,10 +87,10 @@ def main():
 
         call('sudo dd if=%s of=%s status=progress bs=4M'
                 % (selected_iso, selected_drive), shell=True)
-        call('sync', shell=True)
-        print('Done! Now you can remove your drive!')
+        call('sync && sudo eject %s' % selected_drive, shell=True)
+        print('\nDone! Now you can remove your USB!')
     else:
         exit()
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)
